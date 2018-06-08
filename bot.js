@@ -37,28 +37,28 @@ bot.onText(/^\/start$/, function(msg, match) {
 
 async function encodeText(userId, chatId, response) {
 	var picSize		= minPicSize + (~~(response.length / 300) * 50);
-	var picURL		= `http://api.qrserver.com/v1/create-qr-code/?data=${ response }&size=${ picSize }x${ picSize }&qzone=1`;
+	var picURL		= `http://api.qrserver.com/v1/create-qr-code/?data=${ encodeURIComponent(response) }&size=${ picSize }x${ picSize }&qzone=1`;
 	if ( response.length > safePicSizeLimit ) {
 		await bot.sendMessage(userId, `Warning: Large text, may not work`);
 	}
-	bot.sendPhoto(chatId, picURL);
+	try {
+		bot.sendPhoto(chatId, picURL);
+	}
+	catch(e) {
+		bot.sendMessage(userId, `Something went wrong`);
+	}
 }
 
 
 async function decodePhoto(userId, chatId, photo) {
 	var fileURL = await bot.getFileLink(photo.file_id);
 	var URL		= `http://api.qrserver.com/v1/read-qr-code/?fileurl=${ fileURL }`;
-
 	try {
 		var JSONresponse = (await getJSONFrom(URL))[0].symbol[0];
 		bot.sendMessage(userId, JSONresponse.error || JSONresponse.data);
 	}
 	catch(e) {
-		if ( typeof e == 'string' ) {
-			bot.sendMessage(userId, e);
-		} else {
-			throw e;
-		}
+		bot.sendMessage(userId, `Something went wrong${ typeof e == 'number' ? `(${ e })` : '' }`);
 	}
 }
 
@@ -69,7 +69,7 @@ function getJSONFrom(URL) {
 			if ( !error && response.statusCode == 200 ) {
 				resolve(JSON.parse(body));
 			} else {
-				reject(`Something went wrong(${ response.statusCode })`);
+				reject(response.statusCode);
 			}
 		})
 	);
