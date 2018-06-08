@@ -3,7 +3,8 @@ const TelegramBot		= require('node-telegram-bot-api');
 const token				= process.env.TELEGRAM_TOKEN;
 const bot				= new TelegramBot(token, { polling: true });
 const minPicSize		= 350;
-const safePicSizeLimit	= 1000;
+const safePicSizeLimit	= 1200;
+const maxPicSizeLimit	= 3000;
 
 
 bot.on("message", async function(msg, match) {
@@ -38,11 +39,17 @@ bot.onText(/^\/start$/, function(msg, match) {
 async function encodeText(userId, chatId, response) {
 	var picSize		= minPicSize + (~~(response.length / 300) * 50);
 	var picURL		= `http://api.qrserver.com/v1/create-qr-code/?data=${ encodeURIComponent(response) }&size=${ picSize }x${ picSize }&qzone=1`;
+
+	if ( response.length > maxPicSizeLimit ) {
+		bot.sendMessage(userId, `Very large text, should be less than ${ maxPicSizeLimit } characters`);
+		return;
+	}
 	if ( response.length > safePicSizeLimit ) {
 		await bot.sendMessage(userId, `Warning: Large text, may not work`);
 	}
+
 	try {
-		bot.sendPhoto(chatId, picURL);
+		await bot.sendPhoto(chatId, picURL);
 	}
 	catch(e) {
 		bot.sendMessage(userId, `Something went wrong`);
